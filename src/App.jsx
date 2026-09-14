@@ -275,7 +275,10 @@ const CSS = `
 .svc-bar-track { height: 10px; border-radius: 999px; background: #EDE8D8; overflow: hidden; }
 .svc-bar-fill { height: 100%; border-radius: 999px; transition: width .5s cubic-bezier(.4,0,.2,1); }
 .svc-modal-backdrop { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(33,39,31,0.5); backdrop-filter: blur(2px); animation: svcFade .18s ease; }
-.svc-modal { background: var(--surface); border-radius: 16px; padding: 22px; width: 100%; max-width: 400px; max-height: 88vh; overflow-y: auto; box-shadow: 0 24px 60px rgba(0,0,0,0.25); animation: svcPop .22s cubic-bezier(.34,1.56,.64,1); }
+.svc-modal { position: relative; background: var(--surface); border-radius: 16px; padding: 22px; width: 100%; max-width: 400px; max-height: 88vh; overflow-y: auto; box-shadow: 0 24px 60px rgba(0,0,0,0.25); animation: svcPop .22s cubic-bezier(.34,1.56,.64,1); }
+.svc-modal-close { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 50%; background: #fff; color: var(--muted); cursor: pointer; padding: 0; }
+.svc-modal-close:hover { background: var(--soft); color: var(--forest-2); }
+.svc-modal-head { padding-right: 42px; }
 @keyframes svcFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes svcPop { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .svc-slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
@@ -395,6 +398,8 @@ export default function App() {
   const [authMode, setAuthMode] = useState("consumer");
   const [authEmail, setAuthEmail] = useState("");
   const [authPass, setAuthPass] = useState("");
+  const [showLogin, setShowLogin] = useState(false);
+  const [publicWorkerApply, setPublicWorkerApply] = useState(false);
 
   const [role, setRole] = useState("consumer");
   const [bookings, setBookings] = useState(seedBookings());
@@ -542,6 +547,7 @@ export default function App() {
     setSession(null);
     setAuthEmail("");
     setAuthPass("");
+    setShowLogin(false);
   };
 
   const consumerName =
@@ -635,7 +641,14 @@ export default function App() {
     setPanInput("");
   };
 
-  const addWorker = () => {
+  const resetWorkerForm = () => {
+    setNewWorker({
+      name: "", email: "", skill: "Home cleaning", phone: "",
+      experience: "", location: "", skills: "",
+    });
+  };
+
+  const submitWorkerApplication = () => {
     if (!newWorker.name || !newWorker.email || !newWorker.phone) {
       showToast("Please enter name, email and phone number");
       return;
@@ -656,11 +669,41 @@ export default function App() {
 
     setWorkerApplications((prev) => [application, ...prev]);
     setAddWorkerModal(false);
-    setNewWorker({
-      name: "", email: "", skill: "Home cleaning", phone: "",
-      experience: "", location: "", skills: "",
-    });
+    setPublicWorkerApply(false);
+    resetWorkerForm();
     showToast("Application submitted — awaiting cooperative approval");
+  };
+
+  const addWorkerDirectly = () => {
+    if (!newWorker.name || !newWorker.email || !newWorker.phone) {
+      showToast("Please enter name, email and phone number");
+      return;
+    }
+
+    const id = "w" + Math.random().toString(36).slice(2, 6);
+    setWorkers((prev) => [
+      ...prev,
+      {
+        id,
+        name: newWorker.name.trim(),
+        email: newWorker.email.trim(),
+        skill: newWorker.skill,
+        rating: 0,
+        completed: 0,
+        verified: false,
+        aadhaar: "",
+        pan: "",
+        pendingPayout: 0,
+        bio: `${newWorker.experience.trim() || "Experience not specified"}. ${newWorker.skills.trim() || "General service skills"}`,
+        extraSkills: newWorker.skills.split(",").map((x) => x.trim()).filter(Boolean),
+        languages: "Hindi, English",
+        availability: "To be confirmed",
+      },
+    ]);
+
+    setAddWorkerModal(false);
+    resetWorkerForm();
+    showToast("Worker added — pending Aadhaar/PAN verification");
   };
 
   const acceptWorkerApplication = (application) => {
@@ -734,6 +777,121 @@ export default function App() {
   }, [bookings, workers]);
 
   if (!session) {
+    if (publicWorkerApply) {
+      return (
+        <div className="svc">
+          <style>{CSS}</style>
+          <div className="svc-header" style={{ justifyContent: "space-between" }}>
+            <div className="svc-brand">
+              <div className="svc-mark"><Users size={18} color="#fff" /></div>
+              <div><div className="svc-word">SevaSetu</div><div className="svc-sub">{COOP.name}</div></div>
+            </div>
+            <button className="svc-btn secondary" onClick={() => setPublicWorkerApply(false)}>
+              <ArrowRight size={14} /> Back to home
+            </button>
+          </div>
+          <div style={{ maxWidth: 760, margin: "0 auto", padding: "42px 22px 70px", width: "100%", boxSizing: "border-box" }}>
+            <div className="svc-card">
+              <div className="svc-eyebrow">JOIN THE COOPERATIVE</div>
+              <div className="svc-title" style={{ fontSize: 30, marginTop: 8 }}>Become a SevaSetu worker</div>
+              <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginTop: 8, marginBottom: 22 }}>Apply without creating an account first. Your application will be reviewed by the cooperative admin. If accepted, you can then complete identity verification and start receiving work.</div>
+
+              <div className="svc-field"><label>Full name *</label><div className="svc-input-wrap"><input placeholder="e.g. Ramesh Yadav" value={newWorker.name} onChange={(e) => setNewWorker({ ...newWorker, name: e.target.value })} /></div></div>
+              <div className="svc-field"><label>Phone number *</label><div className="svc-input-wrap"><Phone size={15} color="#6E6F5E" /><input type="tel" placeholder="9876543210" value={newWorker.phone} onChange={(e) => setNewWorker({ ...newWorker, phone: e.target.value })} /></div></div>
+              <div className="svc-field"><label>Email *</label><div className="svc-input-wrap"><Mail size={15} color="#6E6F5E" /><input type="email" placeholder="ramesh@example.com" value={newWorker.email} onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })} /></div></div>
+              <div className="svc-field"><label>Service you provide</label><select className="svc-select" style={{ width: "100%" }} value={newWorker.skill} onChange={(e) => setNewWorker({ ...newWorker, skill: e.target.value })}>{Object.keys(CATEGORY_COLOR).map((c) => <option key={c}>{c}</option>)}</select></div>
+              <div className="svc-field"><label>Years of experience</label><div className="svc-input-wrap"><input placeholder="e.g. 4 years" value={newWorker.experience} onChange={(e) => setNewWorker({ ...newWorker, experience: e.target.value })} /></div></div>
+              <div className="svc-field"><label>Location</label><div className="svc-input-wrap"><MapPin size={15} color="#6E6F5E" /><input placeholder="e.g. Gomti Nagar, Lucknow" value={newWorker.location} onChange={(e) => setNewWorker({ ...newWorker, location: e.target.value })} /></div></div>
+              <div className="svc-field"><label>Skills</label><div className="svc-input-wrap"><input placeholder="e.g. deep cleaning, bathroom cleaning" value={newWorker.skills} onChange={(e) => setNewWorker({ ...newWorker, skills: e.target.value })} /></div></div>
+              <button className="svc-btn full" style={{ marginTop: 20 }} onClick={submitWorkerApplication}><UserPlus size={14} /> Submit worker application</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!showLogin) {
+      return (
+        <div className="svc">
+          <style>{CSS}</style>
+          <div className="svc-header" style={{ justifyContent: "space-between" }}>
+            <div className="svc-brand">
+              <div className="svc-mark">
+                <Users size={18} color="#fff" />
+              </div>
+              <div>
+                <div className="svc-word">SevaSetu</div>
+                <div className="svc-sub">{COOP.name}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="svc-btn" onClick={() => setPublicWorkerApply(true)}>
+                <UserPlus size={14} />
+                Become a worker
+              </button>
+              <button className="svc-btn" onClick={() => setShowLogin(true)}>
+                <ArrowRight size={14} />
+                Login
+              </button>
+            </div>
+          </div>
+
+          <div style={{ maxWidth: 1120, margin: "0 auto", padding: "58px 22px 80px", width: "100%", boxSizing: "border-box" }}>
+            <div style={{ maxWidth: 760 }}>
+              <div className="svc-eyebrow">WORKER-OWNED HOME SERVICES · LUCKNOW</div>
+              <div className="svc-title" style={{ fontSize: 46, lineHeight: 1.08, marginTop: 10 }}>
+                Reliable local services, powered by the cooperative.
+              </div>
+              <p style={{ color: "var(--muted)", fontSize: 16, lineHeight: 1.7, maxWidth: 650, marginTop: 18 }}>
+                SevaSetu connects households with identity-verified local workers while keeping pricing transparent and putting a larger share of every booking back into workers' hands.
+              </p>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
+                <button className="svc-btn" onClick={() => setShowLogin(true)}>
+                  Get started <ArrowRight size={14} />
+                </button>
+                <button className="svc-btn secondary" onClick={() => setPublicWorkerApply(true)}>
+                  <UserPlus size={14} /> Apply as a worker
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14, marginTop: 48 }}>
+              {[
+                [ShieldCheck, "Verified workers", "Identity verification helps build trust before a worker becomes active."],
+                [IndianRupee, "Transparent pricing", "Clear service prices with an 80% worker payout model."],
+                [Clock, "Easy booking", "Choose a service, pick a slot and track the booking status."],
+                [Users, "Cooperative model", "Workers are members of a local cooperative, not just platform listings."],
+              ].map(([Icon, title, text]) => (
+                <div className="svc-card" key={title}>
+                  <Icon size={22} color="var(--accent)" />
+                  <div className="svc-card-title" style={{ marginTop: 12 }}>{title}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.6, marginTop: 7 }}>{text}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="svc-card" style={{ marginTop: 14, padding: 22 }}>
+              <div className="svc-eyebrow">HOW SEVASETU WORKS</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 18, marginTop: 14 }}>
+                {[
+                  ["01", "Choose a service", "Find cleaning, plumbing, tutoring, elder care and more."],
+                  ["02", "Book a worker", "See transparent pricing and select an available slot."],
+                  ["03", "Track the work", "Use status updates and OTP checks for a safer service."],
+                  ["04", "Rate & support", "Share feedback and help strengthen the local cooperative."],
+                ].map(([num, title, text]) => (
+                  <div key={num}>
+                    <div style={{ fontWeight: 800, color: "var(--accent)", fontSize: 12 }}>{num}</div>
+                    <div className="svc-card-title" style={{ marginTop: 5 }}>{title}</div>
+                    <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.55, marginTop: 5 }}>{text}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="svc">
         <style>{CSS}</style>
@@ -747,90 +905,70 @@ export default function App() {
               <div className="svc-sub">{COOP.name}</div>
             </div>
           </div>
+          <button className="svc-btn secondary" onClick={() => setShowLogin(false)}>
+            <ArrowRight size={14} /> Back to home
+          </button>
         </div>
         <div className="svc-auth-wrap">
-          <form className="svc-auth-card" onSubmit={handleLogin}>
-            <div className="svc-title" style={{ fontSize: 21 }}>
-              Welcome back
-            </div>
-            <div className="svc-eyebrow">Sign in to continue to SevaSetu</div>
-            <div className="svc-auth-toggle">
+          <div className="svc-auth-card">
+            <div className="svc-title" style={{ fontSize: 25 }}>Who are you?</div>
+            <div className="svc-eyebrow" style={{ marginBottom: 18 }}>Choose your SevaSetu account type to continue</div>
+            <div style={{ display: "grid", gap: 10 }}>
               {[
-                ["consumer", "Consumer"],
-                ["worker", "Worker"],
-                ["admin", "Coop admin"],
-              ].map(([v, l]) => (
+                ["consumer", "Consumer", "Book trusted local services", Users],
+                ["worker", "Worker", "Manage jobs and earnings", Users],
+                ["admin", "Coop admin", "Manage the cooperative", ShieldCheck],
+              ].map(([v, title, text, Icon]) => (
                 <button
                   type="button"
                   key={v}
-                  className={authMode === v ? "active" : ""}
                   onClick={() => setAuthMode(v)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%",
+                    padding: 14, borderRadius: 12, border: authMode === v ? "1.5px solid var(--accent)" : "1px solid var(--border)",
+                    background: authMode === v ? "rgba(62, 87, 62, .07)" : "#fff", cursor: "pointer"
+                  }}
                 >
-                  {l}
+                  <span style={{ width: 36, height: 36, borderRadius: 10, display: "grid", placeItems: "center", background: "var(--soft)" }}><Icon size={17} /></span>
+                  <span style={{ flex: 1 }}><strong style={{ display: "block", fontSize: 13 }}>{title}</strong><span style={{ display: "block", color: "var(--muted)", fontSize: 11, marginTop: 3 }}>{text}</span></span>
+                  {authMode === v && <Check size={16} color="var(--accent)" />}
                 </button>
               ))}
             </div>
-            <div className="svc-field">
-              <label>Email address</label>
-              <div className="svc-input-wrap">
-                <Mail size={15} color="#6E6F5E" />
-                <input
-                  type="email"
-                  placeholder={
-                    authMode === "worker"
-                      ? "radha.devi@example.com"
-                      : "you@example.com"
-                  }
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                />
-              </div>
-              {authMode === "worker" && (
-                <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                  Try: radha.devi@example.com
+
+            <form onSubmit={handleLogin} style={{ marginTop: 22 }}>
+              <div className="svc-field">
+                <label>Email address</label>
+                <div className="svc-input-wrap">
+                  <Mail size={15} color="#6E6F5E" />
+                  <input
+                    type="email"
+                    placeholder={authMode === "worker" ? "radha.devi@example.com" : "you@example.com"}
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                  />
                 </div>
-              )}
-            </div>
-            <div className="svc-field">
-              <label>Password</label>
-              <div className="svc-input-wrap">
-                <Lock size={15} color="#6E6F5E" />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={authPass}
-                  onChange={(e) => setAuthPass(e.target.value)}
-                />
+                {authMode === "worker" && <div style={{ fontSize: 11, color: "var(--muted)" }}>Try: radha.devi@example.com</div>}
               </div>
-            </div>
-            <button
-              className="svc-btn full"
-              style={{ marginTop: 22 }}
-              type="submit"
-            >
-              Log in
-              <ArrowRight size={14} />
-            </button>
-            <div
-              style={{
-                textAlign: "center",
-                fontSize: 12,
-                color: "var(--muted)",
-                marginTop: 14,
-              }}
-            >
-              Prototype login — any password works
-            </div>
-            <button
-              type="button"
-              className="svc-btn full"
-              style={{ marginTop: 14 }}
-              onClick={() => setAddWorkerModal(true)}
-            >
-              <UserPlus size={14} />
-              Apply to join as a worker
-            </button>
-          </form>
+              <div className="svc-field">
+                <label>Password</label>
+                <div className="svc-input-wrap">
+                  <Lock size={15} color="#6E6F5E" />
+                  <input type="password" placeholder="••••••••" value={authPass} onChange={(e) => setAuthPass(e.target.value)} />
+                </div>
+              </div>
+              <button className="svc-btn full" style={{ marginTop: 22 }} type="submit">
+                Log in <ArrowRight size={14} />
+              </button>
+              <div style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", marginTop: 14 }}>Prototype login — any password works</div>
+            </form>
+
+            {authMode === "worker" && (
+              <button type="button" className="svc-btn secondary full" style={{ marginTop: 14 }} onClick={() => setPublicWorkerApply(true)}>
+                <UserPlus size={14} /> Don't have a worker account? Apply here
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1665,10 +1803,13 @@ export default function App() {
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button
                   className="svc-btn"
-                  onClick={() => setAddWorkerModal(true)}
+                  onClick={() => {
+                    resetWorkerForm();
+                    setAddWorkerModal(true);
+                  }}
                 >
                   <UserPlus size={14} />
-                  Open worker application
+                  Add Worker
                 </button>
               </div>
             </div>
@@ -2066,7 +2207,7 @@ export default function App() {
               }}
             >
               <div className="svc-card-title">Verify {verifyModal.name}</div>
-              <button onClick={() => setVerifyModal(null)}>
+              <button className="svc-modal-close" aria-label="Close" onClick={() => setVerifyModal(null)}>
                 <X size={16} />
               </button>
             </div>
@@ -2107,12 +2248,17 @@ export default function App() {
       {addWorkerModal && (
         <div className="svc-modal-backdrop">
           <div className="svc-modal">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div className="svc-card-title">Apply to join SevaSetu</div>
-                <div className="svc-eyebrow">Your application will be reviewed by the cooperative admin.</div>
-              </div>
-              <button onClick={() => setAddWorkerModal(false)}><X size={16} /></button>
+            <div className="svc-modal-head">
+              <div className="svc-card-title">Add a New Worker</div>
+              <div className="svc-eyebrow">Add a worker directly to the cooperative. They will still need Aadhaar/PAN verification before activation.</div>
+              <button
+                type="button"
+                className="svc-modal-close"
+                aria-label="Close"
+                onClick={() => setAddWorkerModal(false)}
+              >
+                <X size={16} />
+              </button>
             </div>
 
             <div className="svc-field">
@@ -2165,9 +2311,9 @@ export default function App() {
               <textarea className="svc-textarea" style={{ minHeight: 70 }} placeholder="e.g. Pipe fitting, leakage repair, drain cleaning" value={newWorker.skills} onChange={(e) => setNewWorker({ ...newWorker, skills: e.target.value })} />
             </div>
 
-            <button className="svc-btn full" style={{ marginTop: 18 }} onClick={addWorker}>
+            <button className="svc-btn full" style={{ marginTop: 18 }} onClick={addWorkerDirectly}>
               <UserPlus size={14} />
-              Submit worker application
+              Add Worker
             </button>
           </div>
         </div>
@@ -2183,7 +2329,7 @@ export default function App() {
               }}
             >
               <div className="svc-card-title">Pay {payModal.name}</div>
-              <button onClick={() => setPayModal(null)}>
+              <button className="svc-modal-close" aria-label="Close" onClick={() => setPayModal(null)}>
                 <X size={16} />
               </button>
             </div>
