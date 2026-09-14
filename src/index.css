@@ -8,18 +8,20 @@
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
+
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px,
     rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
   --sans: system-ui, "Segoe UI", Roboto, sans-serif;
   --heading: system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
-  background: var(--bg);
+  background: #fff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -32,56 +34,70 @@
   }
 }
 
+/* Prevent browser dark mode from making the page background black */
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px,
-      rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+    --text: #6b6375;
+    --text-h: #08060d;
+    --bg: #fff;
+    --border: #e5e4e7;
+    --code-bg: #f4f3ec;
+    --accent: #aa3bff;
+    --accent-bg: rgba(170, 59, 255, 0.1);
+    --accent-border: rgba(170, 59, 255, 0.5);
+    --social-bg: rgba(244, 243, 236, 0.5);
   }
 
   #social .button-icon {
-    filter: invert(1) brightness(2);
+    filter: none;
   }
 }
 
+/* Global reset */
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
+html {
   width: 100%;
   min-width: 100%;
   min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #fff;
 }
 
 body {
+  width: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #fff;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
+/* Full-screen application */
 #root {
   width: 100%;
   max-width: none;
   min-width: 100%;
-  margin: 0;
-  padding: 0;
-  text-align: center;
   min-height: 100vh;
   min-height: 100svh;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  text-align: center;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+/* Make sure the app itself can fill the available height */
+#root > * {
+  max-width: 100%;
 }
 
 h1,
