@@ -431,7 +431,12 @@ export default function App() {
     name: "",
     email: "",
     skill: "Home cleaning",
+    phone: "",
+    experience: "",
+    location: "",
+    skills: "",
   });
+  const [workerApplications, setWorkerApplications] = useState([]);
   const [aadhaarInput, setAadhaarInput] = useState("");
   const [panInput, setPanInput] = useState("");
 
@@ -631,29 +636,65 @@ export default function App() {
   };
 
   const addWorker = () => {
-    if (!newWorker.name || !newWorker.email) {
-      showToast("Enter worker name and email");
+    if (!newWorker.name || !newWorker.email || !newWorker.phone) {
+      showToast("Please enter name, email and phone number");
       return;
     }
+
+    const application = {
+      id: "app" + Math.random().toString(36).slice(2, 7),
+      name: newWorker.name.trim(),
+      email: newWorker.email.trim(),
+      phone: newWorker.phone.trim(),
+      skill: newWorker.skill,
+      experience: newWorker.experience.trim() || "Not specified",
+      location: newWorker.location.trim() || COOP.region,
+      skills: newWorker.skills.trim() || "General service skills",
+      status: "Pending",
+      appliedAt: new Date().toLocaleDateString(),
+    };
+
+    setWorkerApplications((prev) => [application, ...prev]);
+    setAddWorkerModal(false);
+    setNewWorker({
+      name: "", email: "", skill: "Home cleaning", phone: "",
+      experience: "", location: "", skills: "",
+    });
+    showToast("Application submitted — awaiting cooperative approval");
+  };
+
+  const acceptWorkerApplication = (application) => {
     const id = "w" + Math.random().toString(36).slice(2, 6);
     setWorkers((prev) => [
       ...prev,
       {
         id,
-        name: newWorker.name,
-        email: newWorker.email,
-        skill: newWorker.skill,
+        name: application.name,
+        email: application.email,
+        skill: application.skill,
         rating: 0,
         completed: 0,
         verified: false,
         aadhaar: "",
         pan: "",
         pendingPayout: 0,
+        bio: `${application.experience} of experience. ${application.skills}`,
+        extraSkills: application.skills.split(",").map((x) => x.trim()).filter(Boolean),
+        languages: "Hindi, English",
+        availability: "To be confirmed",
       },
     ]);
-    showToast("Worker added — pending Aadhaar/PAN verification");
-    setAddWorkerModal(false);
-    setNewWorker({ name: "", email: "", skill: "Home cleaning" });
+    setWorkerApplications((prev) =>
+      prev.map((a) => a.id === application.id ? { ...a, status: "Accepted" } : a)
+    );
+    showToast(`${application.name} accepted — verify their ID to activate them`);
+  };
+
+  const rejectWorkerApplication = (application) => {
+    setWorkerApplications((prev) =>
+      prev.map((a) => a.id === application.id ? { ...a, status: "Rejected" } : a)
+    );
+    showToast(`${application.name}'s application was rejected`);
   };
   const removeWorker = (id) => {
     setWorkers((prev) => prev.filter((w) => w.id !== id));
@@ -780,6 +821,15 @@ export default function App() {
             >
               Prototype login — any password works
             </div>
+            <button
+              type="button"
+              className="svc-btn full"
+              style={{ marginTop: 14 }}
+              onClick={() => setAddWorkerModal(true)}
+            >
+              <UserPlus size={14} />
+              Apply to join as a worker
+            </button>
           </form>
         </div>
       </div>
@@ -1514,6 +1564,50 @@ export default function App() {
               <FileCheck size={13} />
               Aadhaar & PAN checks before a worker can accept bookings
             </div>
+            {workerApplications.length > 0 && (
+              <div className="svc-section" style={{ marginBottom: 16 }}>
+                <div className="svc-section-head">
+                  <div>
+                    <div className="svc-section-title">Worker applications</div>
+                    <div className="svc-eyebrow">Review people who want to join the cooperative</div>
+                  </div>
+                  <span className="svc-pill requested">
+                    {workerApplications.filter((a) => a.status === "Pending").length} pending
+                  </span>
+                </div>
+                {workerApplications.map((app) => (
+                  <div key={app.id} className="svc-row">
+                    <div style={{ flex: 1 }}>
+                      <div className="svc-row-title">
+                        {app.name}{" "}
+                        <span className={`svc-pill ${app.status === "Pending" ? "requested" : app.status === "Accepted" ? "verified" : "unverified"}`}>
+                          {app.status}
+                        </span>
+                      </div>
+                      <div className="svc-row-meta">
+                        {app.skill} · {app.experience} · {app.location}
+                      </div>
+                      <div className="svc-row-meta" style={{ marginTop: 4 }}>
+                        {app.phone} · {app.email}
+                      </div>
+                      <div className="svc-row-meta" style={{ marginTop: 4 }}>
+                        Skills: {app.skills} · Applied {app.appliedAt}
+                      </div>
+                    </div>
+                    {app.status === "Pending" && (
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <button className="svc-btn" onClick={() => acceptWorkerApplication(app)}>
+                          <Check size={13} /> Accept
+                        </button>
+                        <button className="svc-btn danger" onClick={() => rejectWorkerApplication(app)}>
+                          <X size={13} /> Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="svc-section">
               {workers.map((w) => (
                 <div key={w.id} className="svc-row">
@@ -1568,13 +1662,15 @@ export default function App() {
                   Add, remove, and pay cooperative workers
                 </div>
               </div>
-              <button
-                className="svc-btn"
-                onClick={() => setAddWorkerModal(true)}
-              >
-                <UserPlus size={14} />
-                Add worker
-              </button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  className="svc-btn"
+                  onClick={() => setAddWorkerModal(true)}
+                >
+                  <UserPlus size={14} />
+                  Open worker application
+                </button>
+              </div>
             </div>
             <div className="svc-section">
               {workers.map((w) => (
@@ -2011,70 +2107,71 @@ export default function App() {
       {addWorkerModal && (
         <div className="svc-modal-backdrop">
           <div className="svc-modal">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div className="svc-card-title">Add new worker</div>
-              <button onClick={() => setAddWorkerModal(false)}>
-                <X size={16} />
-              </button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div className="svc-card-title">Apply to join SevaSetu</div>
+                <div className="svc-eyebrow">Your application will be reviewed by the cooperative admin.</div>
+              </div>
+              <button onClick={() => setAddWorkerModal(false)}><X size={16} /></button>
             </div>
+
             <div className="svc-field">
-              <label>Full name</label>
+              <label>Full name *</label>
               <div className="svc-input-wrap">
-                <input
-                  placeholder="e.g. Ramesh Yadav"
-                  value={newWorker.name}
-                  onChange={(e) =>
-                    setNewWorker({ ...newWorker, name: e.target.value })
-                  }
-                />
+                <input placeholder="e.g. Ramesh Yadav" value={newWorker.name} onChange={(e) => setNewWorker({ ...newWorker, name: e.target.value })} />
               </div>
             </div>
+
             <div className="svc-field">
-              <label>Email</label>
+              <label>Phone number *</label>
+              <div className="svc-input-wrap">
+                <Phone size={15} color="#6E6F5E" />
+                <input type="tel" placeholder="9876543210" value={newWorker.phone} onChange={(e) => setNewWorker({ ...newWorker, phone: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="svc-field">
+              <label>Email *</label>
               <div className="svc-input-wrap">
                 <Mail size={15} color="#6E6F5E" />
-                <input
-                  placeholder="ramesh.yadav@example.com"
-                  value={newWorker.email}
-                  onChange={(e) =>
-                    setNewWorker({ ...newWorker, email: e.target.value })
-                  }
-                />
+                <input type="email" placeholder="ramesh@example.com" value={newWorker.email} onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })} />
               </div>
             </div>
+
             <div className="svc-field">
-              <label>Skill category</label>
-              <select
-                className="svc-select"
-                style={{ width: "100%" }}
-                value={newWorker.skill}
-                onChange={(e) =>
-                  setNewWorker({ ...newWorker, skill: e.target.value })
-                }
-              >
-                {Object.keys(CATEGORY_COLOR).map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
+              <label>Service you provide</label>
+              <select className="svc-select" style={{ width: "100%" }} value={newWorker.skill} onChange={(e) => setNewWorker({ ...newWorker, skill: e.target.value })}>
+                {Object.keys(CATEGORY_COLOR).map((c) => <option key={c}>{c}</option>)}
               </select>
             </div>
-            <button
-              className="svc-btn full"
-              style={{ marginTop: 20 }}
-              onClick={addWorker}
-            >
+
+            <div className="svc-field">
+              <label>Years of experience</label>
+              <div className="svc-input-wrap">
+                <input placeholder="e.g. 4 years" value={newWorker.experience} onChange={(e) => setNewWorker({ ...newWorker, experience: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="svc-field">
+              <label>Location</label>
+              <div className="svc-input-wrap">
+                <MapPin size={15} color="#6E6F5E" />
+                <input placeholder="e.g. Gomti Nagar, Lucknow" value={newWorker.location} onChange={(e) => setNewWorker({ ...newWorker, location: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="svc-field">
+              <label>Skills</label>
+              <textarea className="svc-textarea" style={{ minHeight: 70 }} placeholder="e.g. Pipe fitting, leakage repair, drain cleaning" value={newWorker.skills} onChange={(e) => setNewWorker({ ...newWorker, skills: e.target.value })} />
+            </div>
+
+            <button className="svc-btn full" style={{ marginTop: 18 }} onClick={addWorker}>
               <UserPlus size={14} />
-              Add worker
+              Submit worker application
             </button>
           </div>
         </div>
       )}
-
       {payModal && (
         <div className="svc-modal-backdrop">
           <div className="svc-modal">
