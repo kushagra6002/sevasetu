@@ -915,7 +915,7 @@ export default function App() {
             <div className="svc-eyebrow" style={{ marginBottom: 18 }}>Choose your SevaSetu account type to continue</div>
             <div style={{ display: "grid", gap: 10 }}>
               {[
-                ["consumer", "Consumer", "Book trusted local services", Users],
+                ["consumer", "User", "Book trusted local services", Users],
                 ["worker", "Worker", "Manage jobs and earnings", Users],
                 ["admin", "Coop admin", "Manage the cooperative", ShieldCheck],
               ].map(([v, title, text, Icon]) => (
@@ -990,7 +990,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div className="svc-tabs">
             {session.role === "consumer" && (
-              <button className="svc-tab active">Consumer</button>
+              <button className="svc-tab active">User</button>
             )}
             {session.role === "worker" && (
               <button className="svc-tab active">Worker</button>
